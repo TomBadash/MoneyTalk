@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MoneyTalk — דשבורד</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="theme.js"></script>
+</head>
+<body>
+
+<header class="toolbar">
+  <span class="brand logo"><span class="mark">₪</span> Money<b style="color:var(--accent)">Talk</b></span>
+  <nav>
+    <a href="index.html">מערכת עיצוב</a>
+    <a class="active" href="dashboard.html">דשבורד</a>
+    <a href="add-expense.html">הוספת הוצאה</a>
+    <a href="expenses.html">הוצאות</a>
+  </nav>
+  <button class="theme-toggle" title="מצב כהה / בהיר">🌙</button>
+</header>
+
+<div class="stage">
+  <div class="phone">
+    <div class="screen">
+
+      <!-- app header -->
+      <div class="appbar">
+        <div>
+          <div class="greeting">ערב טוב 👋</div>
+          <div class="name">תום</div>
+        </div>
+        <div class="avatar">ת</div>
+      </div>
+
+      <!-- HERO -->
+      <div class="hero">
+        <div class="spread">
+          <span class="label">הוצאות החודש</span>
+          <span class="trend up">▲ 12%</span>
+        </div>
+        <div class="amount tnum">4,250<small>₪</small></div>
+        <svg class="spark" viewBox="0 0 320 46" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--accent)" stop-opacity=".28"/>
+              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M0,34 L26,30 L52,33 L78,22 L104,26 L130,16 L156,24 L182,14 L208,20 L234,10 L260,17 L286,8 L320,12 L320,46 L0,46 Z" fill="url(#sg)"/>
+          <path d="M0,34 L26,30 L52,33 L78,22 L104,26 L130,16 L156,24 L182,14 L208,20 L234,10 L260,17 L286,8 L320,12" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+
+        <div class="budget-row">
+          <span class="lbl">תקציב שנותר</span>
+          <span class="val tnum">₪1,750 <span class="muted tiny">מתוך ₪6,000</span></span>
+        </div>
+        <div class="progress"><span style="width:71%"></span></div>
+        <div class="tiny muted mt8">71% מהתקציב נוצל · נותרו 11 ימים בחודש</div>
+      </div>
+
+      <!-- STAT CARDS -->
+      <div class="stats mt16">
+        <div class="stat">
+          <div class="k">הוצאות השבוע</div>
+          <div class="v tnum">₪1,420</div>
+          <div class="sub neg">▲ 12% מהשבוע שעבר</div>
+        </div>
+        <div class="stat">
+          <div class="k">ממוצע יומי</div>
+          <div class="v tnum">₪142</div>
+          <div class="sub muted">7 ימים אחרונים</div>
+        </div>
+        <div class="stat">
+          <div class="k">שיעור חיסכון</div>
+          <div class="v tnum">23%</div>
+          <div class="sub pos">▲ 4% מהחודש שעבר</div>
+        </div>
+        <div class="stat">
+          <div class="k">שווי נקי</div>
+          <div class="v tnum">₪84,500</div>
+          <div class="sub pos">▲ ₪2,100</div>
+        </div>
+      </div>
+
+      <!-- AI INSIGHT -->
+      <div class="section-h"><h3>תובנה שבועית</h3></div>
+      <div class="insight">
+        <div class="top"><span class="badge">✦</span><b>MoneyTalk חושב…</b></div>
+        <p>השבוע הוצאת <b>1,420 ₪</b> — עלייה של <b>12%</b> לעומת השבוע שעבר. רוב ההוצאות היו ב<b>מסעדות</b> וב<b>קניות</b>. שים לב: הוצאות המסעדות גבוהות ב‑65% מהממוצע שלך.</p>
+      </div>
+
+      <!-- CATEGORY DONUT -->
+      <div class="section-h"><h3>פילוח לפי קטגוריה</h3><a href="#">הכול ←</a></div>
+      <div class="card">
+        <div class="donut-wrap">
+          <div class="donut" style="border-radius:50%; background:conic-gradient(var(--c-rest) 0 32%, var(--c-shop) 32% 56%, var(--c-food) 56% 74%, var(--c-car) 74% 88%, var(--c-other) 88% 100%);">
+            <div class="hole" style="position:absolute; inset:20px; background:var(--surface); border-radius:50%;"></div>
+            <div class="center"><div><div class="t">סה״כ החודש</div><div class="a tnum">₪4,250</div></div></div>
+          </div>
+          <div class="legend">
+            <div class="li"><span class="sw" style="background:var(--c-rest)"></span> מסעדות <span class="pc">32%</span></div>
+            <div class="li"><span class="sw" style="background:var(--c-shop)"></span> קניות <span class="pc">24%</span></div>
+            <div class="li"><span class="sw" style="background:var(--c-food)"></span> אוכל <span class="pc">18%</span></div>
+            <div class="li"><span class="sw" style="background:var(--c-car)"></span> רכב <span class="pc">14%</span></div>
+            <div class="li"><span class="sw" style="background:var(--c-other)"></span> אחר <span class="pc">12%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECENT -->
+      <div class="section-h"><h3>הוצאות אחרונות</h3><a href="expenses.html">הכול ←</a></div>
+      <div class="exp-list">
+        <div class="exp">
+          <span class="ic" style="background:var(--c-rest)">🍽️</span>
+          <div class="meta"><div class="t">קפה ומאפה</div><div class="s">מסעדות · היום 14:30 · אשראי</div></div>
+          <span class="amt tnum">₪38</span>
+        </div>
+        <div class="exp">
+          <span class="ic" style="background:var(--c-shop)">🛍️</span>
+          <div class="meta"><div class="t">סופרמרקט</div><div class="s">קניות · היום 11:05 · אשראי</div></div>
+          <span class="amt tnum">₪214</span>
+        </div>
+        <div class="exp">
+          <span class="ic" style="background:var(--c-home)">🏠</span>
+          <div class="meta"><div class="t">שכר דירה</div><div class="s">דירה · הוצאה קבועה · 01/06</div></div>
+          <span class="amt tnum fixed">₪4,200</span>
+        </div>
+        <div class="exp">
+          <span class="ic" style="background:var(--c-transit)">🚌</span>
+          <div class="meta"><div class="t">רב‑קו</div><div class="s">תחבורה · אתמול 08:12 · ביט</div></div>
+          <span class="amt tnum">₪12</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- bottom nav -->
+    <nav class="bottomnav">
+      <a class="active" href="dashboard.html"><span class="gi">⌂</span> בית</a>
+      <a href="expenses.html"><span class="gi">🧾</span> הוצאות</a>
+      <a class="add" href="add-expense.html">+</a>
+      <a href="#"><span class="gi">📊</span> דוחות</a>
+      <a href="#"><span class="gi">⚙︎</span> הגדרות</a>
+    </nav>
+  </div>
+</div>
+
+</body>
+</html>
