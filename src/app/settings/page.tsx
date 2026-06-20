@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { useStore } from "@/lib/store";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -10,7 +11,7 @@ import { signOut } from "@/app/auth/actions";
 const cloud = isSupabaseConfigured();
 
 export default function SettingsPage() {
-  const { expenses } = useStore();
+  const { expenses, recurring } = useStore();
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,6 +35,26 @@ export default function SettingsPage() {
           <span className="tnum muted">{expenses.length}</span>
         </div>
       </div>
+
+      <div className="section-h">
+        <h3>הוצאות קבועות</h3>
+      </div>
+      <Link href="/recurring" className="card" style={{ display: "block" }}>
+        <div className="spread">
+          <div>
+            <div style={{ fontWeight: 700 }}>🔁 ניהול הוצאות קבועות</div>
+            <div className="tiny muted" style={{ marginTop: 3 }}>
+              שכר דירה, מנויים וחיובים חודשיים — נרשמים אוטומטית
+            </div>
+          </div>
+          <span
+            className="tnum muted"
+            style={{ marginInlineStart: "auto", fontWeight: 800 }}
+          >
+            {recurring.length} ←
+          </span>
+        </div>
+      </Link>
 
       {cloud ? (
         <>

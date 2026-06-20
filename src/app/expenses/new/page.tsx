@@ -2,15 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { useStore } from "@/lib/store";
+import { useStore, firstOfMonthISO } from "@/lib/store";
 import { CATEGORIES, getCategory } from "@/lib/categories";
 import { PAYMENT_METHODS } from "@/lib/payment-methods";
 import { parseQuickEntry } from "@/lib/parse-quick";
 import { formatMoney, formatTime, relativeDayLabel } from "@/lib/format";
 import { recent } from "@/lib/selectors";
 
+function addMonthsISO(startISO: string, n: number): string {
+  const d = new Date(startISO);
+  return firstOfMonthISO(new Date(d.getFullYear(), d.getMonth() + n, 1));
+}
+
 export default function AddExpensePage() {
-  const { expenses, addExpense } = useStore();
+  const { expenses, addExpense, addRecurring } = useStore();
 
   const [quick, setQuick] = useState("");
   const [amount, setAmount] = useState("");
@@ -20,6 +25,10 @@ export default function AddExpensePage() {
   const [dateStr, setDateStr] = useState("");
   const [timeStr, setTimeStr] = useState("");
   const [note, setNote] = useState("");
+  const [makeRecurring, setMakeRecurring] = useState(false);
+  const [recurDuration, setRecurDuration] = useState<"forever" | "count">("forever");
+  const [recurMonths, setRecurMonths] = useState("12");
+  const [recurDay, setRecurDay] = useState("");
   const [showToast, setShowToast] = useState(false);
 
   // Default date/time to "now" on the client (avoids hydration mismatch).
@@ -45,6 +54,18 @@ export default function AddExpensePage() {
     setQuick("");
   }
 
+  function toggleRecurring() {
+    setMakeRecurring((on) => {
+      const next = !on;
+      // When turning it on, default the charge day to the chosen date's day.
+      if (next) {
+        const day = dateStr ? Number(dateStr.split("-")[2]) : 1;
+        setRecurDay(String(Math.min(28, Math.max(1, day || 1))));
+      }
+      return next;
+    });
+  }
+
   const canSubmit = title.trim() !== "" && Number(amount) > 0;
 
   function submit() {
@@ -61,10 +82,40 @@ export default function AddExpensePage() {
       note,
       date: iso,
     });
+    // Optionally turn this into a monthly recurring rule. The one-off above
+    // covers the current month, so the rule starts NEXT month to avoid
+    // double-counting. "מספר חודשים" is the total count incl. this month, so
+    // the rule needs (total - 1) future months.
+    if (makeRecurring) {
+      const base = new Date(iso);
+      const nextStart = firstOfMonthISO(
+        new Date(base.getFullYear(), base.getMonth() + 1, 1)
+      );
+      const total = Math.max(1, Number(recurMonths) || 1);
+      // count mode with total <= 1 means "this month only" → no rule needed.
+      if (recurDuration !== "count" || total > 1) {
+        addRecurring({
+          title,
+          amount: Number(amount),
+          categoryId,
+          paymentMethodId,
+          note,
+          dayOfMonth: Math.min(28, Math.max(1, Number(recurDay) || base.getDate())),
+          startMonth: nextStart,
+          endMonth:
+            recurDuration === "count"
+              ? addMonthsISO(nextStart, total - 2)
+              : undefined,
+        });
+      }
+    }
     // reset for fast repeated entry
     setTitle("");
     setAmount("");
     setNote("");
+    setMakeRecurring(false);
+    setRecurDuration("forever");
+    setRecurMonths("12");
     setShowToast(true);
     window.setTimeout(() => setShowToast(false), 2600);
   }
@@ -202,6 +253,89 @@ export default function AddExpensePage() {
             onChange={(e) => setNote(e.target.value)}
             placeholder="הוסף הערה…"
           />
+        </div>
+
+        <div className="field">
+          <button
+            type="button"
+            className={`recur-toggle${makeRecurring ? " on" : ""}`}
+            onClick={toggleRecurring}
+            aria-pressed={makeRecurring}
+          >
+            <span className="box">{makeRecurring ? "✓" : ""}</span>
+            <span className="meta">
+              <span className="t">🔁 הוצאה קבועה כל חודש</span>
+              <span className="s">
+                {makeRecurring
+                  ? "נרשם החודש, ויחזור אוטומטית מהחודש הבא"
+                  : "תירשם אוטומטית בכל חודש"}
+              </span>
+            </span>
+          </button>
+
+          {makeRecurring && (
+            <div className="recur-panel">
+              <div className="row" style={{ gap: 12, alignItems: "flex-end" }}>
+                <div className="field" style={{ marginTop: 0, flex: "0 0 110px" }}>
+                  <label>יום החיוב</label>
+                  <input
+                    className="input tnum"
+                    value={recurDay}
+                    onChange={(e) =>
+                      setRecurDay(e.target.value.replace(/[^\d]/g, "").slice(0, 2))
+                    }
+                    inputMode="numeric"
+                    placeholder="1"
+                  />
+                </div>
+                <div className="tiny muted" style={{ paddingBottom: 14 }}>
+                  בכל חודש (1–28)
+                </div>
+              </div>
+
+              <div className="field">
+                <label>משך</label>
+                <div className="chips">
+                  <button
+                    type="button"
+                    className={`chip${recurDuration === "forever" ? " accent active" : ""}`}
+                    onClick={() => setRecurDuration("forever")}
+                  >
+                    ללא הגבלה
+                  </button>
+                  <button
+                    type="button"
+                    className={`chip${recurDuration === "count" ? " accent active" : ""}`}
+                    onClick={() => setRecurDuration("count")}
+                  >
+                    מספר חודשים
+                  </button>
+                </div>
+                {recurDuration === "count" && (
+                  <div className="row" style={{ gap: 10, marginTop: 12 }}>
+                    <input
+                      className="input tnum"
+                      style={{ maxWidth: 110 }}
+                      value={recurMonths}
+                      onChange={(e) =>
+                        setRecurMonths(e.target.value.replace(/[^\d]/g, "").slice(0, 3))
+                      }
+                      inputMode="numeric"
+                    />
+                    <span className="muted tiny">חודשים בסך הכול (כולל החודש הזה)</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="tiny muted" style={{ marginTop: 6 }}>
+                לעריכה או השהיה בהמשך — ראה{" "}
+                <a href="/recurring" style={{ color: "var(--accent)", fontWeight: 700 }}>
+                  ניהול הוצאות קבועות
+                </a>
+                .
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ height: 22 }} />

@@ -68,8 +68,9 @@ export default function DashboardPage() {
   const slices = categoryBreakdown(expenses, now).slice(0, 6);
   const top = topCategory(expenses, now);
   const largest = largestThisWeek(expenses, now);
-  const recentItems = recent(expenses, 4);
   const monthCount = expenses.filter((e) => inMonth(e, now)).length;
+  // The dashboard reflects the current month only (past months live in Reports).
+  const recentItems = recent(expenses.filter((e) => inMonth(e, now)), 4);
 
   // donut gradient from slices
   let acc = 0;
@@ -233,7 +234,7 @@ export default function DashboardPage() {
           {recentItems.map((e) => {
             const cat = getCategory(e.categoryId);
             const pm = getPaymentMethod(e.paymentMethodId);
-            const isFixed = e.note === "הוצאה קבועה";
+            const isFixed = Boolean(e.recurringId) || e.note === "הוצאה קבועה";
             return (
               <div className="exp" key={e.id}>
                 <span className="ic" style={{ background: cat.color }}>

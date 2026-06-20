@@ -34,9 +34,11 @@ export function prevWeekTotal(expenses: Expense[], ref = new Date()): number {
   return sum(expenses.filter((e) => inRange(e, to - 7 * DAY, to)));
 }
 
+/** Average daily spend = the month's total spread across all days in the month
+ * (not just the elapsed days, which made early-month figures spike). */
 export function dailyAverage(expenses: Expense[], ref = new Date()): number {
-  const dayOfMonth = ref.getDate();
-  return dayOfMonth > 0 ? monthTotal(expenses, ref) / dayOfMonth : 0;
+  const days = daysInMonth(ref);
+  return days > 0 ? monthTotal(expenses, ref) / days : 0;
 }
 
 export function recent(expenses: Expense[], n = 5): Expense[] {
@@ -91,6 +93,66 @@ export function largestThisWeek(
 export function pctChange(a: number, b: number): number | null {
   if (b === 0) return null;
   return (a - b) / b;
+}
+
+// ── monthly reports ────────────────────────────────────
+export function monthCount(expenses: Expense[], ref = new Date()): number {
+  return expenses.filter((e) => inMonth(e, ref)).length;
+}
+
+/** The single biggest expense in `ref`'s month, if any. */
+export function biggestInMonth(
+  expenses: Expense[],
+  ref = new Date()
+): Expense | undefined {
+  return expenses
+    .filter((e) => inMonth(e, ref))
+    .sort((a, b) => b.amount - a.amount)[0];
+}
+
+/** Split a month's spend into recurring (auto-posted) vs one-off. */
+export function recurringSplit(
+  expenses: Expense[],
+  ref = new Date()
+): { recurring: number; oneTime: number } {
+  let recurring = 0;
+  let oneTime = 0;
+  for (const e of expenses) {
+    if (!inMonth(e, ref)) continue;
+    if (e.recurringId) recurring += e.amount;
+    else oneTime += e.amount;
+  }
+  return { recurring, oneTime };
+}
+
+export type MonthTotal = {
+  year: number;
+  month: number; // 0–11
+  total: number;
+};
+
+/** Totals for the trailing `count` months ending at `ref` (oldest first). */
+export function monthlyTotals(
+  expenses: Expense[],
+  ref = new Date(),
+  count = 6
+): MonthTotal[] {
+  const out: MonthTotal[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(ref.getFullYear(), ref.getMonth() - i, 1);
+    out.push({
+      year: d.getFullYear(),
+      month: d.getMonth(),
+      total: monthTotal(expenses, d),
+    });
+  }
+  return out;
+}
+
+/** Whether `ref`'s month is the live (current) calendar month. */
+export function isCurrentMonth(ref: Date): boolean {
+  const now = new Date();
+  return ref.getMonth() === now.getMonth() && ref.getFullYear() === now.getFullYear();
 }
 
 // ── Budget math ────────────────────────────────────────

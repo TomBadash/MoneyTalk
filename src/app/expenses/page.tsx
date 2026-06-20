@@ -12,6 +12,7 @@ import {
   relativeDayLabel,
   hebrewMonth,
 } from "@/lib/format";
+import { inMonth } from "@/lib/selectors";
 
 type Sort = "newest" | "oldest" | "highest" | "lowest";
 
@@ -31,7 +32,10 @@ export default function ExpensesPage() {
   const [sort, setSort] = useState<Sort>("newest");
 
   const filtered = useMemo(() => {
-    let list = expenses;
+    // The everyday list shows only the current month — past months live in
+    // Reports. Recurring expenses re-appear here because they're re-posted each
+    // month, so the list reads as a fresh slate on the 1st.
+    let list = expenses.filter((e) => inMonth(e, new Date()));
     if (query.trim()) {
       const q = query.trim();
       list = list.filter((e) => e.title.includes(q));
@@ -140,7 +144,7 @@ export default function ExpensesPage() {
               {g.items.map((e) => {
                 const cat = getCategory(e.categoryId);
                 const pm = getPaymentMethod(e.paymentMethodId);
-                const isFixed = e.note === "הוצאה קבועה";
+                const isFixed = Boolean(e.recurringId) || e.note === "הוצאה קבועה";
                 return (
                   <div className="exp" key={e.id}>
                     <span className="ic" style={{ background: cat.color }}>
