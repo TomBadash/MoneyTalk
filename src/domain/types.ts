@@ -67,6 +67,8 @@ export type RecurringRule = {
   active: boolean;
   categoryId?: string | null;
   consumptionType?: ConsumptionType | null;
+  source?: "detected" | "user";
+  amountVariable?: boolean;
 };
 
 export type Profile = {
@@ -86,3 +88,13 @@ export type AccountRow = { id: string; kind: "bank" | "credit_card" | "cash" | "
 export type Budget = { categoryId: string | null; amount: Agorot };
 export type Suggestion = { id: string; kind: "budget" | "category_rule" | "recurring"; categoryId?: string | null; payload: Record<string, unknown>; status: "pending" | "approved" | "modified" | "ignored"; period?: string | null };
 export type Notification = { id: string; kind: string; title: string; body?: string | null; link?: string | null; dedupeKey?: string | null; readAt?: string | null; createdAt: string };
+
+export type Goal = {
+  id: string; name: string; kind: "monthly_saving" | "emergency_fund" | "vacation" | "purchase" | "investment";
+  target: Agorot; current: Agorot; monthlyContribution?: Agorot | null; targetDate?: IsoDate | null;
+};
+export type Connection = {
+  id: string; provider: string; institution: string; status: "active" | "needs_reauth" | "error" | "revoked";
+  lastSuccessfulSync?: string | null; lastAttemptedSync?: string | null; lastError?: string | null; consentExpiresAt?: string | null;
+};
+export type SyncJob = { startedAt: string; finishedAt?: string | null; status: "running" | "ok" | "partial" | "error"; stats?: Record<string, unknown> | null };

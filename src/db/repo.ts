@@ -1,5 +1,5 @@
 import type {
-  AccountRow, Budget, IsoDate, MerchantRow, Notification, ProductRow, Profile, RecurringRule, Suggestion, Txn,
+  AccountRow, Budget, Connection, Goal, SyncJob, IsoDate, MerchantRow, Notification, ProductRow, Profile, RecurringRule, Suggestion, Txn,
 } from "@/domain/types";
 import type { LearnedRule } from "@/classify/memory";
 import type { DashboardPayload } from "@/services/dashboard";
@@ -36,6 +36,8 @@ export interface Repo {
 
   recurring(): Promise<RecurringRule[]>;
   replaceDetectedRecurring(rs: RecurringRule[]): Promise<void>;
+  addUserRecurring(r: Omit<RecurringRule, "id">): Promise<RecurringRule>;
+  deleteRecurring(id: string): Promise<void>;
 
   budgets(): Promise<Budget[]>;
   setBudget(categoryId: string | null, amount: number, reason: "user" | "suggestion_approved" | "onboarding"): Promise<void>;
@@ -43,7 +45,17 @@ export interface Repo {
   upsertSuggestions(ss: Omit<Suggestion, "id">[]): Promise<void>;
   resolveSuggestion(id: string, status: Suggestion["status"]): Promise<void>;
 
+  goals(): Promise<Goal[]>;
+  saveGoal(g: Omit<Goal, "id"> & { id?: string }): Promise<void>;
+  deleteGoal(id: string): Promise<void>;
+
   accounts(): Promise<AccountRow[]>;
+  connections(): Promise<Connection[]>;
+  createConnection(c: { provider: string; institution: string; accounts: Omit<AccountRow, "id">[] }): Promise<{ connection: Connection; accounts: AccountRow[] }>;
+  recordSync(connectionId: string, ok: boolean, error?: string): Promise<void>;
+  deleteConnection(id: string): Promise<void>;
+  lastJob(): Promise<SyncJob | null>;
+  recordJob(j: SyncJob): Promise<void>;
   notifications(): Promise<Notification[]>;
   addNotifications(ns: Omit<Notification, "id" | "createdAt">[]): Promise<void>;
 

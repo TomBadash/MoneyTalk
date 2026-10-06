@@ -1,5 +1,5 @@
 import type {
-  AccountRow, Budget, IsoDate, MerchantRow, Notification, ProductRow, Profile, RecurringRule, Suggestion, Txn,
+  AccountRow, Budget, Connection, Goal, SyncJob, IsoDate, MerchantRow, Notification, ProductRow, Profile, RecurringRule, Suggestion, Txn,
 } from "@/domain/types";
 import type { LearnedRule } from "@/classify/memory";
 import { ruleId } from "@/classify/memory";
@@ -95,6 +95,36 @@ export class MemoryRepo implements Repo {
 
   async recurring() { return this._recurring; }
   async replaceDetectedRecurring(rs: RecurringRule[]) { this._recurring = rs; }
+
+  async addUserRecurring(r: Omit<RecurringRule, "id">) {
+    const row = { ...r, id: uid(), source: "user" as const };
+    this._recurring = [...this._recurring, row];
+    return row;
+  }
+  async deleteRecurring(id: string) { this._recurring = this._recurring.filter((r) => r.id !== id); }
+
+  private _goals = new Map<string, Goal>();
+  async goals() { return [...this._goals.values()]; }
+  async saveGoal(g: Omit<Goal, "id"> & { id?: string }) { const id = g.id ?? uid(); this._goals.set(id, { ...g, id }); }
+  async deleteGoal(id: string) { this._goals.delete(id); }
+
+  private _connections: Connection[] = [];
+  private _jobs: SyncJob[] = [];
+  async connections() { return this._connections; }
+  async createConnection(c: { provider: string; institution: string; accounts: Omit<AccountRow, "id">[] }) {
+    const connection: Connection = { id: uid(), provider: c.provider, institution: c.institution, status: "active", lastSuccessfulSync: null, lastAttemptedSync: null, lastError: null };
+    const accounts = c.accounts.map((a) => ({ ...a, id: uid(), status: "active" as const }));
+    this._connections.push(connection);
+    this._accounts = [...this._accounts, ...accounts];
+    return { connection, accounts };
+  }
+  async recordSync(connectionId: string, ok: boolean, error?: string) {
+    const now = new Date().toISOString();
+    this._connections = this._connections.map((c) => c.id !== connectionId ? c : { ...c, lastAttemptedSync: now, lastSuccessfulSync: ok ? now : c.lastSuccessfulSync, status: ok ? "active" : "error", lastError: ok ? null : error ?? "error" });
+  }
+  async deleteConnection(id: string) { this._connections = this._connections.filter((c) => c.id !== id); }
+  async lastJob() { return this._jobs.at(-1) ?? null; }
+  async recordJob(j: SyncJob) { this._jobs.push(j); }
 
   async budgets() { return this._budgets; }
   async setBudget(categoryId: string | null, amount: number) {
