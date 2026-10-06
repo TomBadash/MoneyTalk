@@ -6,6 +6,7 @@ export type InstallmentPlan = {
   monthly: Agorot;
   paid: number;
   remaining: number;
+  lastDate: string;
 };
 
 /** Group installment charges into plans (same merchant + same monthly amount + same total count). */
@@ -16,9 +17,10 @@ export function installmentPlans(ts: Txn[]): InstallmentPlan[] {
     const key = `${t.merchantNormalized}|${t.amount}|${t.installmentTotal}`;
     const p = plans.get(key) ?? {
       merchant: t.merchantNormalized, total: t.amount * t.installmentTotal, monthly: t.amount,
-      paid: 0, remaining: t.installmentTotal,
+      paid: 0, remaining: t.installmentTotal, lastDate: t.date,
     };
     p.paid = Math.max(p.paid, t.installmentNumber);
+    if (t.date > p.lastDate) p.lastDate = t.date;
     p.remaining = t.installmentTotal - p.paid;
     plans.set(key, p);
   }

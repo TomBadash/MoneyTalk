@@ -45,6 +45,14 @@ describe("classification", () => {
     expect(run("הפקדה להשקעות")).toMatchObject({ financialType: "investment", consumptionType: null });
     expect(run("", { merchant: "ויזה כאל" })).toMatchObject({ financialType: "transfer" });
   });
+  it("a card statement is a transfer even though its text contains 'כרטיס' (regression: was counted as cinema)", () => {
+    const c = run("ויזה כאל - חיוב כרטיס אשראי", { merchant: "ויזה כאל" });
+    expect(c).toMatchObject({ financialType: "transfer", subcategoryId: "s_card_bill" });
+    expect(c.consumptionType).toBeNull();
+  });
+  it("salary and broker deposits are never expenses", () => {
+    expect(run("אקסלנס - הפקדה להשקעות", { merchant: "אקסלנס" }).financialType).toBe("investment");
+  });
   it("unknown text goes to the review queue", () => {
     const c = run("xyzzy blorp");
     expect(band(c.confidence)).toBe("review");

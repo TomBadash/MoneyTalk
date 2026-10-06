@@ -37,6 +37,11 @@ export type Txn = {
   aiReasoningSummary?: string | null;
   userCorrected: boolean;
   notes?: string | null;
+  merchantId?: string | null;
+  recurringId?: string | null;
+  needsReview?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type CategoryNode = {
@@ -71,3 +76,13 @@ export type Profile = {
   monthlyInvestmentTarget: Agorot;
   variableTarget?: Agorot | null; // user-set monthly variable spending target
 };
+
+export type ProductRow = {
+  id: string; name: string; normalized: string; brand?: string | null;
+  subcategoryId?: string | null; categoryId?: string | null; parentCategoryId?: string | null;
+};
+export type MerchantRow = { id: string; name: string; normalized: string; defaultSubcategoryId?: string | null };
+export type AccountRow = { id: string; kind: "bank" | "credit_card" | "cash" | "brokerage" | "pension" | "provident" | "education_fund" | "crypto"; institution: string; name: string; balance?: Agorot | null; lastSync?: string | null; status?: "active" | "needs_reauth" | "error" | "revoked" | null };
+export type Budget = { categoryId: string | null; amount: Agorot };
+export type Suggestion = { id: string; kind: "budget" | "category_rule" | "recurring"; categoryId?: string | null; payload: Record<string, unknown>; status: "pending" | "approved" | "modified" | "ignored"; period?: string | null };
+export type Notification = { id: string; kind: string; title: string; body?: string | null; link?: string | null; dedupeKey?: string | null; readAt?: string | null; createdAt: string };

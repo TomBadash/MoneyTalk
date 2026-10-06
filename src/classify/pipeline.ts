@@ -68,7 +68,19 @@ export function classify(i: ClassifyInput): Classification {
     });
   }
 
-  // 2) dictionary: product + merchant evidence
+  // 2a) A merchant that is not an expense at all (card statement, salary, investment broker, transfer)
+  //     decides on its own — a product keyword in the description ("כרטיס אשראי") must never turn it into spending.
+  if (mHit) {
+    const rm = resolveSub(mHit.entry.sub);
+    if (rm.financialType !== "expense") {
+      return finish(rm, {
+        productName: null, merchantName, confidence: mHit.entry.conf ?? 0.9, source: "dictionary",
+        reason: `"${merchantName}" מזוהה כ"${rm.categoryHe}" — לא נספר כהוצאה.`,
+      });
+    }
+  }
+
+  // 2b) dictionary: product + merchant evidence
   if (pHit && mHit) {
     const rp = resolveSub(pHit.entry.sub), rm = resolveSub(mHit.entry.sub);
     // e.g. "חולצה זארה": both say Shopping/Clothing → very confident; conflict → product wins, lower conf.

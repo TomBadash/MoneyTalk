@@ -135,3 +135,17 @@ export function taxonomyNodes(): CategoryNode[] {
     }),
   ];
 }
+
+/** Display info (name/color/icon) for a node at any level; color/icon fall back to the parent's. */
+export function nodeInfo(id: string | null | undefined): { id: string; he: string; color: string; icon: string; parentId: string | null } {
+  if (id) {
+    const s = subById.get(id);
+    if (s) { const r = resolveSub(id); return { id, he: s.he, color: r.color, icon: r.icon, parentId: r.categoryId }; }
+    const c = catById.get(id);
+    if (c) { const p = parentById.get(c.parent)!; return { id, he: c.he, color: p.color, icon: p.icon, parentId: p.id }; }
+    const p = parentById.get(id);
+    if (p) return { id, he: p.he, color: p.color, icon: p.icon, parentId: null };
+  }
+  const o = parentById.get("p_other")!;
+  return { id: "p_other", he: o.he, color: o.color, icon: o.icon, parentId: null };
+}

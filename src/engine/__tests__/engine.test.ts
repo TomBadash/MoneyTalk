@@ -148,7 +148,7 @@ describe("dedupe / reconcile / installments", () => {
   });
   it("installments", () => {
     const ts = [1, 2, 3].map((k) => tx({ merchantNormalized: "ksp", amount: 100_000, installmentNumber: k, installmentTotal: 6 }));
-    expect(installmentPlans(ts)).toEqual([{ merchant: "ksp", total: 600_000, monthly: 100_000, paid: 3, remaining: 3 }]);
+    expect(installmentPlans(ts)).toEqual([{ merchant: "ksp", total: 600_000, monthly: 100_000, paid: 3, remaining: 3, lastDate: "2026-09-01" }]);
     expect(purchaseBasisAmount(ts[0])).toBe(600_000);
     expect(purchaseBasisAmount(ts[1])).toBe(0);
   });
