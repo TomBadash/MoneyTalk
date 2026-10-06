@@ -52,10 +52,11 @@ export function detectRecurring(history: Txn[], today: IsoDate): Detected[] {
     const amounts = ts.map((t) => t.amount);
     const med = median(amounts);
     const spread = (Math.max(...amounts) - Math.min(...amounts)) / (med || 1);
-    // Variability is judged on the *earlier* charges, so a one-off step up (a price hike) is not
-    // mistaken for a naturally variable bill like electricity.
-    const prior = amounts.length > 2 ? amounts.slice(0, -1) : amounts.slice(0, 1);
-    const priorSpread = (Math.max(...prior) - Math.min(...prior)) / (median(prior) || 1);
+    // A subscription changes price rarely (a step now and then); a utility changes almost every cycle.
+    const changes = amounts.slice(1).filter((a, k) => Math.abs(a - amounts[k]) / (amounts[k] || 1) > 0.03).length;
+    const churn = changes / Math.max(1, amounts.length - 1);
+    const maxStep = amounts.slice(1).reduce((m, a, k) => Math.max(m, Math.abs(a - amounts[k]) / (amounts[k] || 1)), 0);
+    const amountVariable = (changes >= 3 && churn > 0.4) || (amounts.length <= 3 && maxStep > 0.25);
     // Frequent, wildly varying purchases at the same shop (e.g. a supermarket) are habits, not bills.
     if (band.interval === "weekly" && spread > 0.35) continue;
     if (spread > 0.6) continue;
@@ -73,7 +74,7 @@ export function detectRecurring(history: Txn[], today: IsoDate): Detected[] {
       categoryId: last.categoryId ?? null,
       consumptionType: last.consumptionType ?? "fixed",
       occurrences: ts.length,
-      amountVariable: priorSpread > 0.08,
+      amountVariable,
     });
   }
   return out;
@@ -95,8 +96,16 @@ export function recurringAlerts(history: Txn[], rules: Detected[], today: IsoDat
     if (ts.length < 2) continue;
     const last = ts[ts.length - 1], prev = ts[ts.length - 2];
     const typical = median(ts.slice(0, -1).map((t) => t.amount));
-    if (!r.amountVariable && last.amount > prev.amount && diffDays(today, last.date) <= 45) {
-      alerts.push({ kind: "price_increase", merchant: r.title, from: prev.amount, to: last.amount });
+    // most recent step up in a stable price, still fresh (≤ 60 days) — remembered past the next normal charge
+    let step: { from: Agorot; to: Agorot } | null = null;
+    if (!r.amountVariable) {
+      for (let k = ts.length - 1; k >= 1; k--) {
+        if (diffDays(today, ts[k].date) > 60) break;
+        if (ts[k].amount > ts[k - 1].amount) { step = { from: ts[k - 1].amount, to: ts[k].amount }; break; }
+      }
+    }
+    if (step) {
+      alerts.push({ kind: "price_increase", merchant: r.title, ...step });
     } else if (r.amountVariable && last.amount > typical * 1.5 && diffDays(today, last.date) <= 45) {
       alerts.push({ kind: "unusual_amount", merchant: r.title, amount: last.amount, typical });
     }

@@ -84,3 +84,31 @@ export async function approveAction(id: string): Promise<{ ok: boolean }> {
   await after();
   return { ok: true };
 }
+
+import { getAiProvider } from "@/ai";
+import { parseQuestion, execute, type Answer } from "@/services/assistant";
+import { QuerySpecSchema } from "@/ai/query-spec";
+import { getDashboard } from "@/services/dashboard";
+import { rateLimit } from "@/lib/rate-limit";
+
+export async function askAction(question: string): Promise<Answer> {
+  const text = z.string().trim().min(2).max(300).safeParse(question);
+  if (!text.success) return { ok: false, text: "כתוב שאלה קצרה, למשל: כמה הוצאתי על קפה השנה?" };
+  const ctx = await getContext();
+  if (!rateLimit(`ask:${ctx.userId ?? "local"}`, 30)) return { ok: false, text: "שאלות רבות בזמן קצר — נסה שוב בעוד דקה." };
+
+  const [txns, products, merchants, dashboard] = await Promise.all([ctx.read.txns(), ctx.read.products(), ctx.read.merchants(), getDashboard(ctx.read, ctx.today, ctx.demo)]);
+  const names = new Map(products.map((p) => [p.id, p.name]));
+  const data = { today: ctx.today, txns, dashboard, resolve: { products, merchants }, productName: (id: string) => names.get(id) ?? "מוצר" };
+
+  // 1) deterministic rules first (free, instant); 2) the model only translates words → a validated QuerySpec
+  let spec = parseQuestion(text.data, ctx.today);
+  if (!spec) {
+    const ai = getAiProvider();
+    spec = ai.available ? await ai.toQuerySpec(text.data, ctx.today) : null;
+  }
+  if (!spec) return { ok: false, text: "לא הצלחתי להבין את השאלה. נסה למשל: ״כמה הוצאתי על קפה השנה?״, ״מה המוצרים שאני קונה הכי הרבה?״ או ״כמה נשאר לי להוציא השבוע?״" };
+  const valid = QuerySpecSchema.safeParse(spec);
+  if (!valid.success) return { ok: false, text: "לא הצלחתי להבין את השאלה. נסה לנסח אחרת." };
+  return execute(valid.data, data);
+}
