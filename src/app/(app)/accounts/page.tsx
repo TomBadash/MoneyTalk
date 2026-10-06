@@ -61,6 +61,7 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
         <div className="section-h"><h2 id="cn-h" className="h3">{accounts.length ? "חיבור חשבון נוסף" : "חבר חשבון בנק"}</h2></div>
         <div className="card stack-col">
           <p className="muted tiny">החיבור לקריאה בלבד, דרך מסך ההרשאה של הספק. אנחנו לא רואים ולא שומרים סיסמאות בנק, ואי אפשר לבצע פעולות בחשבון.</p>
+          {listProviders().length === 0 && <p className="notice">חיבור בנק אוטומטי עדיין לא הוגדר בשרת הזה. אפשר לייבא קובץ CSV למטה, או להוסיף הוצאות ידנית.</p>}
           {listProviders().map((p) => <form key={p.id} action={beginConnectAction}><input type="hidden" name="provider" value={p.id} /><button className="btn" disabled={ro}>חיבור — {p.displayName}</button></form>)}
           <hr className="rule" />
           <form action={importCsvAction} className="inline-form">

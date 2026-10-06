@@ -137,7 +137,8 @@ export class MemoryRepo implements Repo {
   async recordJob(j: SyncJob) { this._jobs.push(j); }
 
   async budgets() { return this._budgets.filter((b) => b.categoryId == null || b.amount > 0); }
-  async setBudget(categoryId: string | null, amount: number) {
+  async setBudget(categoryId: string | null, amount: number, _reason?: "user" | "suggestion_approved" | "onboarding") {
+    void _reason;
     this._budgets = [...this._budgets.filter((b) => b.categoryId !== categoryId), { categoryId, amount }];
     if (categoryId == null) this._profile = { ...this._profile, variableTarget: amount };
     this._snapshots.clear();
