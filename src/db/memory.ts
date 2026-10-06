@@ -162,6 +162,8 @@ export class MemoryRepo implements Repo {
     }
   }
 
+  async markNotificationsRead() { const now = new Date().toISOString(); this._notifications = this._notifications.map((n) => ({ ...n, readAt: n.readAt ?? now })); }
+
   async snapshot(date: IsoDate) { return this._snapshots.get(date) ?? null; }
   async saveSnapshot(date: IsoDate, payload: DashboardPayload) { this._snapshots.set(date, { payload, computedThrough: new Date().toISOString() }); }
   async audit(action: string, target?: string, meta?: Record<string, unknown>) { this.auditLog.push({ action, target, meta }); }

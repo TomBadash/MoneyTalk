@@ -103,3 +103,27 @@ describe("learning", () => {
     expect(await ingestDrafts(repo, [d], TODAY)).toHaveLength(0);
   });
 });
+
+import { ensureSuggestions } from "../suggestions";
+describe("monthly budget suggestion → approve", () => {
+  it("is offered once, never changes the budget silently, and applies only when approved", async () => {
+    const r = await buildDemoRepo(TODAY);
+    await r.setBudget("c_eating_out", 50_000, "user"); // user set ₪500; they actually spend ~₪900
+    await ensureSuggestions(r, TODAY);
+    const pending = await r.suggestions("pending");
+    const s = pending.find((x) => x.categoryId === "c_eating_out")!;
+    expect(s).toBeDefined();
+    const p = s.payload as { suggested: number; current: number; avg: number };
+    expect(p.current).toBe(50_000);
+    expect(p.suggested).toBeGreaterThan(p.current);          // nudged toward reality…
+    expect(p.suggested).toBeLessThan(p.avg);                  // …but only halfway (gradual)
+    expect((await r.budgets()).find((b) => b.categoryId === "c_eating_out")!.amount).toBe(50_000); // untouched until approved
+    // approve
+    await r.setBudget("c_eating_out", p.suggested, "suggestion_approved");
+    await r.resolveSuggestion(s.id, "approved");
+    expect((await r.budgets()).find((b) => b.categoryId === "c_eating_out")!.amount).toBe(p.suggested);
+    // not re-offered for the same period, even after approval
+    await ensureSuggestions(r, TODAY);
+    expect((await r.suggestions("pending")).some((x) => x.categoryId === "c_eating_out")).toBe(false);
+  });
+});

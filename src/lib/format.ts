@@ -91,3 +91,9 @@ export function formatIso(d: string): string {
 export function formatIsoShort(d: string): string {
   return `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 }
+
+/** ISO timestamp → "DD/MM HH:mm" in Israel time. */
+export function formatDateTimeIL(iso: string): string {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jerusalem", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+  return `${p.day}/${p.month} ${p.hour}:${p.minute}`;
+}

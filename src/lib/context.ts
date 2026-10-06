@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import type { Repo } from "@/db/repo";
 import { SupabaseRepo } from "@/db/supabase";
 import { getDemoRepo } from "@/db/demo";
@@ -27,6 +28,8 @@ export type AppContext = {
 
 /** Per-request context (memoised by React `cache`). Redirects to /login if there is no session. */
 export const getContext = cache(async (): Promise<AppContext> => {
+  // Everything here is per-user and per-day: never prerender at build time (also covers the no-Supabase local mode).
+  await connection();
   const today = todayIsrael();
 
   if (!isSupabaseConfigured()) {

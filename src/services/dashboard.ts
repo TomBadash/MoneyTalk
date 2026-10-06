@@ -89,9 +89,11 @@ export function buildDashboard(i: DashboardInput): DashboardPayload {
   const histSpan = earliest ? Math.min(90, Math.max(1, diffDays(mStart, earliest))) : 1;
   const historicalDaily = histTxns.length ? Math.round(sumAmt(histTxns) / histSpan) : 0;
 
-  const fixedMonth = fixedPaid + fixedRec.remaining;
+  // Until history reveals the real fixed bills, assume rent + a typical ₪1,300 of other fixed costs (arnona, utilities, phone, internet).
+  const fixedFloor = profile.monthlyRent > 0 ? profile.monthlyRent + 130_000 : 0;
+  const fixedMonth = Math.max(fixedPaid + fixedRec.remaining, fixedFloor);
   let target = userTarget;
-  let derived = userTarget == null;
+  const derived = userTarget == null;
   if (target == null) {
     target = Math.max(0, availableVariable(profile, fixedMonth, knownUpcoming));
     if (target === 0 && historicalDaily > 0) target = historicalDaily * 30; // no income info → mirror observed behaviour

@@ -98,17 +98,21 @@ browser (it bypasses RLS).
 
 ## 5. Secrets & environment variables
 
-| Variable | Where | Secret? |
-|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | client + server | No (safe to expose) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | client + server | No — protected by RLS |
-| `SUPABASE_SERVICE_ROLE_KEY` | **server only** (admin tasks) | **YES — never `NEXT_PUBLIC`, never commit** |
+| Variable | Where | Secret? | Purpose |
+|---|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | client + server | No | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or legacy `…_ANON_KEY`) | client + server | No — protected by RLS | Browser/session access |
+| `SUPABASE_SERVICE_ROLE_KEY` | **server only** | **YES** | `/api/v1/expense` (API keys), the cron job, account deletion. Every query made with it is re-scoped to one user in `SupabaseRepo`. |
+| `APP_ENCRYPTION_KEY` | **server only** | **YES** | AES-256-GCM key for provider tokens at rest. `openssl rand -base64 32`. Required in production. |
+| `CRON_SECRET` | **server only** | **YES** | Bearer secret for `/api/cron/daily` (Vercel Cron sends it automatically). |
+| `ANTHROPIC_API_KEY` | **server only** | **YES** | Optional. Enables AI category suggestions for unknown merchants and natural-language → query translation. Without it every feature still works deterministically. |
+| `MONEYTALK_AI_MODEL` | server | No | Optional model override (default `claude-opus-5-5`). |
+| `MONEYTALK_DEV_API_KEY` | server | dev only | Local (no-Supabase) mode: a key accepted by `/api/v1/expense`. |
 
-- Local: put these in **`.env.local`** (already gitignored by the Next.js scaffold).
-- Production: set them in the **Vercel dashboard → Project → Settings → Environment
-  Variables** (encrypted at rest).
-- If a secret ever leaks, **rotate it** in Supabase immediately.
-- Anything prefixed `NEXT_PUBLIC_` is bundled into the browser — only put non-secrets there.
+- Local: put these in **`.env.local`** (gitignored). Without the Supabase variables the app runs in a
+  local in-memory demo mode (nothing is persisted).
+- Production: set them in the **Vercel dashboard → Project → Settings → Environment Variables**.
+- Never prefix a secret with `NEXT_PUBLIC_`. If a secret leaks, rotate it immediately.
 
 ---
 
@@ -148,7 +152,7 @@ export default {
 - **SQL injection**: the Supabase client parameterizes queries; don't build raw SQL from
   user input.
 - **CSRF**: cookie-based Supabase auth uses `SameSite` cookies; Next.js Server Actions
-  have built-in origin checks. Keep both.
+  have built-in origin checks (`/api/v1` uses Bearer keys, not cookies, so it is not CSRF-exposed). Keep both.
 - **Rate limiting** on auth-sensitive paths (login, signup) — Supabase has some built in;
   add Vercel/Upstash rate limiting for extra protection against brute force.
 - **Dependencies**: run `npm audit` periodically and keep Next/Supabase patched.
@@ -170,20 +174,21 @@ export default {
 ## 9. Step-by-step go-live
 
 1. **Supabase project** — create it; pick a region (EU is a good default for Israel).
-2. **Schema + RLS** — run the SQL migration (tables, `user_id`, RLS policies §4).
-3. **Auth providers** — enable Email; configure **Google OAuth** (client id/secret,
-   authorized redirect URIs for localhost + the prod domain).
-4. **Wire the app** — add `@supabase/ssr`, server/client Supabase helpers, `middleware.ts`,
-   and swap the local store for Supabase-backed data access.
-5. **Env vars** — `.env.local` for dev; same keys in Vercel for prod.
-6. **Push to GitHub** — commit the repo (with `.env.local` gitignored).
-7. **Import to Vercel** — connect the GitHub repo, add the env vars, deploy.
-8. **Auth redirect URLs** — in Supabase, add the Vercel production URL to allowed
-   redirect/site URLs.
-9. **Custom domain** (optional) — add it in Vercel; HTTPS is provisioned automatically.
-10. **Add security headers** (§6) and test (e.g. securityheaders.com, SSL Labs).
-11. **Smoke test** — sign in as two different users and confirm each sees only their own
-    data (RLS check).
+2. **Schema + RLS** — apply the migrations in `supabase/migrations/` in order
+   (`0001`…`0005`; use the Supabase CLI `supabase db push`, or paste them into the SQL editor).
+   `0004_seed_taxonomy.sql` is generated: `npm run gen:taxonomy` after changing `src/classify/taxonomy.ts`.
+   `0005` migrates data from the legacy `expenses` / `recurring_expenses` tables (idempotent).
+3. **Auth providers** — enable Email; optionally Google OAuth with redirect URIs for localhost + prod.
+4. **Env vars** — all of §5 in Vercel (generate `APP_ENCRYPTION_KEY` and `CRON_SECRET`).
+5. **Import to Vercel** — connect the repo and deploy. `vercel.json` schedules `/api/cron/daily` at 03:00 UTC.
+6. **Auth redirect URLs** — add the production URL in Supabase → Auth → URL configuration.
+7. **Security smoke test** — sign in as two users: each must see only their own data. Hit
+   `/api/cron/daily` without the secret (expect 401).
+8. **Optional** — create an API key in Settings and test `POST /api/v1/expense`.
+
+**Real Open Banking:** implement `FinancialDataProvider` (`src/providers/types.ts`) for your aggregator,
+register it in `src/providers/registry.ts`, and nothing else changes. The mock provider shows the full
+consent → import → reconcile flow.
 
 ---
 
@@ -195,19 +200,13 @@ export default {
 
 ---
 
-## 11. Where MoneyTalk is today vs. this target
+## 11. Status
 
-| | Now (demo) | Secure website (target) |
-|---|---|---|
-| Data | Browser `localStorage` | Supabase Postgres |
-| Auth | None | Supabase Auth (Google + email) |
-| Multi-device | No | Yes |
-| Privacy | Single browser only | Per-user RLS isolation |
-| Hosting | `localhost` | Vercel + HTTPS + custom domain |
-
-Moving to the target = implementing **Phase 1 (Supabase)** from the plan. The current
-screens, components, formatting, and data-layer shape are built to swap their data source
-to Supabase with minimal UI change.
+Phase 1 is implemented: Supabase auth + RLS, durable transaction model with immutable raw imports,
+classification with learning, product memory, budgets/safe-to-spend/forecast, recurring detection,
+analytics, monthly report, AI assistant, daily job, REST + API-key endpoints, CSV import.
+Phase 1.5 has the connector architecture and a mock provider (no real aggregator yet). Phase 2
+(investments, net worth) has schema only. See README.md for what is and isn't verified.
 
 ---
 

@@ -15,12 +15,13 @@ const sh = (a: number) => String(Math.round(a / 100));
 export default async function Budgets() {
   const ctx = await getContext();
   const ro = ctx.demo && !ctx.local;
-  if (!ctx.demo) await ensureSuggestions(ctx.write, ctx.today).catch(() => undefined);
+  const persistable = !ctx.demo || ctx.local; // real users, and the local in-memory mode (supabase demo users only see a preview)
+  if (persistable) await ensureSuggestions(ctx.write, ctx.today).catch(() => undefined);
   const [d, budgets, goals, txns] = await Promise.all([
     getDashboard(ctx.read, ctx.today, ctx.demo), ctx.read.budgets(), ctx.read.goals(), ctx.read.txns({ from: monthStart(ctx.today), to: ctx.today }),
   ]);
-  const persisted = ctx.demo ? [] : await ctx.read.suggestions("pending");
-  const sugg = ctx.demo
+  const persisted = persistable ? await ctx.read.suggestions("pending") : [];
+  const sugg = !persistable
     ? (await computeBudgetSuggestions(ctx.read, ctx.today)).map((s, i) => ({ id: `demo-${i}`, categoryId: s.categoryId, payload: { current: s.current, suggested: s.suggested, avg: s.avg, months: s.months } as Record<string, number | null> }))
     : persisted.map((s) => ({ id: s.id, categoryId: s.categoryId ?? null, payload: s.payload as Record<string, number | null> }));
 

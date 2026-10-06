@@ -94,7 +94,7 @@ export function recurringAlerts(history: Txn[], rules: Detected[], today: IsoDat
       .filter((t) => t.merchantNormalized === r.merchantNormalized && t.financialType === "expense")
       .sort((a, b) => a.date.localeCompare(b.date));
     if (ts.length < 2) continue;
-    const last = ts[ts.length - 1], prev = ts[ts.length - 2];
+    const last = ts[ts.length - 1];
     const typical = median(ts.slice(0, -1).map((t) => t.amount));
     // most recent step up in a stable price, still fresh (≤ 60 days) — remembered past the next normal charge
     let step: { from: Agorot; to: Agorot } | null = null;

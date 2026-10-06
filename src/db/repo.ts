@@ -65,6 +65,7 @@ export interface Repo {
   recordJob(j: SyncJob): Promise<void>;
   notifications(): Promise<Notification[]>;
   addNotifications(ns: Omit<Notification, "id" | "createdAt">[]): Promise<void>;
+  markNotificationsRead(): Promise<void>;
 
   snapshot(date: IsoDate): Promise<{ payload: DashboardPayload; computedThrough: string } | null>;
   saveSnapshot(date: IsoDate, payload: DashboardPayload): Promise<void>;

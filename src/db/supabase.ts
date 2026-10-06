@@ -330,6 +330,8 @@ export class SupabaseRepo implements Repo {
     }
   }
 
+  async markNotificationsRead() { check(await this.from("notifications").update({ read_at: new Date().toISOString() }).is("read_at", null), "markNotificationsRead"); }
+
   /* snapshots & audit */
   async snapshot(date: IsoDate) {
     const r = check(await this.from("daily_financial_snapshots").select("payload, computed_through").eq("snapshot_date", date).maybeSingle(), "snapshot") as Row | null;

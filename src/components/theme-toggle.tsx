@@ -1,14 +1,14 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 /** Round light/dark toggle. Renders a stable placeholder until mounted
  *  to avoid hydration mismatch (theme is only known on the client). */
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // false on the server and during hydration, true afterwards — avoids a theme-dependent mismatch
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
 
   const isDark = resolvedTheme === "dark";
   return (

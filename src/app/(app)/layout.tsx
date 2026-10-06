@@ -9,6 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const unread = notes.filter((n) => !n.readAt).length;
   return (
     <div className="app">
+      <a className="skip" href="#main">דלג לתוכן</a>
       <Sidebar unread={unread} review={review.length} />
       <div className="main">
         <MobileTopBar unread={unread} />
