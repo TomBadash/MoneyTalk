@@ -84,7 +84,7 @@ export type ProductRow = {
   subcategoryId?: string | null; categoryId?: string | null; parentCategoryId?: string | null;
 };
 export type MerchantRow = { id: string; name: string; normalized: string; defaultSubcategoryId?: string | null };
-export type AccountRow = { id: string; kind: "bank" | "credit_card" | "cash" | "brokerage" | "pension" | "provident" | "education_fund" | "crypto"; institution: string; name: string; balance?: Agorot | null; lastSync?: string | null; status?: "active" | "needs_reauth" | "error" | "revoked" | null };
+export type AccountRow = { id: string; kind: "bank" | "credit_card" | "cash" | "brokerage" | "pension" | "provident" | "education_fund" | "crypto"; institution: string; name: string; balance?: Agorot | null; lastSync?: string | null; status?: "active" | "needs_reauth" | "error" | "revoked" | null; externalId?: string | null; connectionId?: string | null };
 export type Budget = { categoryId: string | null; amount: Agorot };
 export type Suggestion = { id: string; kind: "budget" | "category_rule" | "recurring"; categoryId?: string | null; payload: Record<string, unknown>; status: "pending" | "approved" | "modified" | "ignored"; period?: string | null };
 export type Notification = { id: string; kind: string; title: string; body?: string | null; link?: string | null; dedupeKey?: string | null; readAt?: string | null; createdAt: string };
@@ -98,3 +98,6 @@ export type Connection = {
   lastSuccessfulSync?: string | null; lastAttemptedSync?: string | null; lastError?: string | null; consentExpiresAt?: string | null;
 };
 export type SyncJob = { startedAt: string; finishedAt?: string | null; status: "running" | "ok" | "partial" | "error"; stats?: Record<string, unknown> | null };
+
+export type ApiKeyRow = { id: string; name: string; prefix: string; createdAt: string; lastUsedAt?: string | null; revoked: boolean };
+export type NotificationPrefs = { budget_80: boolean; weekly_pace: boolean; price_change: boolean; new_recurring: boolean; weekly_left: boolean };

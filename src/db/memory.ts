@@ -1,12 +1,12 @@
 import type {
-  AccountRow, Budget, Connection, Goal, SyncJob, IsoDate, MerchantRow, Notification, ProductRow, Profile, RecurringRule, Suggestion, Txn,
+  AccountRow, ApiKeyRow, Budget, Connection, Goal, NotificationPrefs, SyncJob, IsoDate, MerchantRow, Notification, ProductRow, Profile, RecurringRule, Suggestion, Txn,
 } from "@/domain/types";
 import type { LearnedRule } from "@/classify/memory";
 import { ruleId } from "@/classify/memory";
 import type { Repo, TxnFilter } from "./repo";
 import type { DashboardPayload } from "@/services/dashboard";
 
-type ProfileRow = Profile & { onboarded: boolean; displayName?: string | null };
+type ProfileRow = Profile & { onboarded: boolean; displayName?: string | null; notificationPrefs?: NotificationPrefs };
 const uid = () => crypto.randomUUID();
 
 /** In-process repository: demo mode (read-mostly) and local dev without Supabase env vars. */
@@ -113,18 +113,26 @@ export class MemoryRepo implements Repo {
   private _connections: Connection[] = [];
   private _jobs: SyncJob[] = [];
   async connections() { return this._connections; }
-  async createConnection(c: { provider: string; institution: string; accounts: Omit<AccountRow, "id">[] }) {
-    const connection: Connection = { id: uid(), provider: c.provider, institution: c.institution, status: "active", lastSuccessfulSync: null, lastAttemptedSync: null, lastError: null };
-    const accounts = c.accounts.map((a) => ({ ...a, id: uid(), status: "active" as const }));
+  async createAccount(a: Omit<AccountRow, "id">) { const row = { ...a, id: uid(), status: a.status ?? ("active" as const) }; this._accounts = [...this._accounts, row]; return row; }
+  private _tokens = new Map<string, string>();
+  private _keys: (ApiKeyRow & { hash: string })[] = [];
+  async createConnection(c: { provider: string; institution: string; accounts: Omit<AccountRow, "id">[]; tokenCiphertext?: string; consentExpiresAt?: string | null }) {
+    const connection: Connection = { id: uid(), provider: c.provider, institution: c.institution, status: "active", lastSuccessfulSync: null, lastAttemptedSync: null, lastError: null, consentExpiresAt: c.consentExpiresAt ?? null };
+    const accounts = c.accounts.map((a) => ({ ...a, id: uid(), status: "active" as const, connectionId: connection.id }));
     this._connections.push(connection);
     this._accounts = [...this._accounts, ...accounts];
+    if (c.tokenCiphertext) this._tokens.set(connection.id, c.tokenCiphertext);
     return { connection, accounts };
   }
+  async connectionToken(id: string) { return this._tokens.get(id) ?? null; }
+  async apiKeys() { return this._keys.map(({ hash, ...k }) => (void hash, k)); }
+  async createApiKey(name: string, hash: string, prefix: string) { const k = { id: uid(), name, prefix, hash, createdAt: new Date().toISOString(), revoked: false }; this._keys.push(k); const { hash: _h, ...pub } = k; void _h; return pub; }
+  async revokeApiKey(id: string) { this._keys = this._keys.map((k) => (k.id === id ? { ...k, revoked: true } : k)); }
   async recordSync(connectionId: string, ok: boolean, error?: string) {
     const now = new Date().toISOString();
     this._connections = this._connections.map((c) => c.id !== connectionId ? c : { ...c, lastAttemptedSync: now, lastSuccessfulSync: ok ? now : c.lastSuccessfulSync, status: ok ? "active" : "error", lastError: ok ? null : error ?? "error" });
   }
-  async deleteConnection(id: string) { this._connections = this._connections.filter((c) => c.id !== id); }
+  async deleteConnection(id: string) { this._connections = this._connections.filter((c) => c.id !== id); this._accounts = this._accounts.map((a) => (a.connectionId === id ? { ...a, connectionId: null, status: "revoked" as const } : a)); this._tokens.delete(id); }
   async lastJob() { return this._jobs.at(-1) ?? null; }
   async recordJob(j: SyncJob) { this._jobs.push(j); }
 

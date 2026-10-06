@@ -1,5 +1,5 @@
 import type {
-  AccountRow, Budget, Connection, Goal, SyncJob, IsoDate, MerchantRow, Notification, ProductRow, Profile, RecurringRule, Suggestion, Txn,
+  AccountRow, ApiKeyRow, Budget, Connection, Goal, NotificationPrefs, SyncJob, IsoDate, MerchantRow, Notification, ProductRow, Profile, RecurringRule, Suggestion, Txn,
 } from "@/domain/types";
 import type { LearnedRule } from "@/classify/memory";
 import type { DashboardPayload } from "@/services/dashboard";
@@ -15,8 +15,8 @@ export type TxnFilter = {
  */
 export interface Repo {
   readonly kind: "supabase" | "memory";
-  profile(): Promise<Profile & { onboarded: boolean; displayName?: string | null }>;
-  saveProfile(p: Partial<Profile> & { onboarded?: boolean; displayName?: string | null }): Promise<void>;
+  profile(): Promise<Profile & { onboarded: boolean; displayName?: string | null; notificationPrefs?: NotificationPrefs }>;
+  saveProfile(p: Partial<Profile> & { onboarded?: boolean; displayName?: string | null; notificationPrefs?: NotificationPrefs }): Promise<void>;
 
   txns(f?: TxnFilter): Promise<Txn[]>;
   txn(id: string): Promise<Txn | null>;
@@ -52,7 +52,13 @@ export interface Repo {
 
   accounts(): Promise<AccountRow[]>;
   connections(): Promise<Connection[]>;
-  createConnection(c: { provider: string; institution: string; accounts: Omit<AccountRow, "id">[] }): Promise<{ connection: Connection; accounts: AccountRow[] }>;
+  createAccount(a: Omit<AccountRow, "id">): Promise<AccountRow>;
+  createConnection(c: { provider: string; institution: string; accounts: Omit<AccountRow, "id">[]; tokenCiphertext?: string; consentExpiresAt?: string | null }): Promise<{ connection: Connection; accounts: AccountRow[] }>;
+  /** Encrypted provider token (server-side only). */
+  connectionToken(id: string): Promise<string | null>;
+  apiKeys(): Promise<ApiKeyRow[]>;
+  createApiKey(name: string, hash: string, prefix: string): Promise<ApiKeyRow>;
+  revokeApiKey(id: string): Promise<void>;
   recordSync(connectionId: string, ok: boolean, error?: string): Promise<void>;
   deleteConnection(id: string): Promise<void>;
   lastJob(): Promise<SyncJob | null>;

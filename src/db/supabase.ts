@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
-  AccountRow, Budget, Connection, Goal, SyncJob, IsoDate, MerchantRow, Notification, ProductRow, Profile, RecurringRule, Suggestion, Txn,
+  AccountRow, ApiKeyRow, Budget, Connection, Goal, NotificationPrefs, SyncJob, IsoDate, MerchantRow, Notification, ProductRow, Profile, RecurringRule, Suggestion, Txn,
 } from "@/domain/types";
 import type { LearnedRule } from "@/classify/memory";
 import type { DashboardPayload } from "@/services/dashboard";
@@ -9,7 +9,7 @@ import type { Repo, TxnFilter } from "./repo";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Row = Record<string, any>;
-type ProfileRow = Profile & { onboarded: boolean; displayName?: string | null };
+type ProfileRow = Profile & { onboarded: boolean; displayName?: string | null; notificationPrefs?: NotificationPrefs };
 
 const PAGE = 1000; // PostgREST's default max-rows
 
@@ -96,7 +96,7 @@ export class SupabaseRepo implements Repo {
       monthlyIncome: Number(r?.monthly_income_agorot ?? 0), monthlyRent: Number(r?.monthly_rent_agorot ?? 0),
       monthlySavingsTarget: Number(r?.monthly_savings_target_agorot ?? 0), monthlyInvestmentTarget: Number(r?.monthly_investment_target_agorot ?? 0),
       variableTarget: r?.variable_target_agorot == null ? null : Number(r.variable_target_agorot),
-      onboarded: !!r?.onboarded, displayName: r?.display_name ?? null,
+      onboarded: !!r?.onboarded, displayName: r?.display_name ?? null, notificationPrefs: r?.notification_prefs ?? undefined,
     };
   }
   async saveProfile(p: Partial<ProfileRow>) {
@@ -108,6 +108,7 @@ export class SupabaseRepo implements Repo {
     if (p.variableTarget !== undefined) row.variable_target_agorot = p.variableTarget;
     if (p.onboarded != null) row.onboarded = p.onboarded;
     if (p.displayName !== undefined) row.display_name = p.displayName;
+    if (p.notificationPrefs) row.notification_prefs = p.notificationPrefs;
     check(await this.from("profiles").upsert(row, { onConflict: "user_id" }), "saveProfile");
   }
 
@@ -244,15 +245,29 @@ export class SupabaseRepo implements Repo {
     const rows = check(await this.from("financial_connections").select("*"), "connections") as Row[];
     return rows.map((r) => ({ id: r.id, provider: r.provider, institution: r.institution, status: r.status, lastSuccessfulSync: r.last_successful_sync, lastAttemptedSync: r.last_attempted_sync, lastError: r.last_error, consentExpiresAt: r.consent_expires_at }));
   }
-  async createConnection(c: { provider: string; institution: string; accounts: Omit<AccountRow, "id">[] }) {
-    const r = check(await this.from("financial_connections").insert({ provider: c.provider, institution: c.institution, status: "active", read_only: true }).select("*").single(), "createConnection") as Row;
-    const accounts: AccountRow[] = [];
-    for (const a of c.accounts) {
-      const ar = check(await this.from("accounts").insert({ connection_id: r.id, kind: a.kind, institution: a.institution, name: a.name, balance_agorot: a.balance ?? null }).select("*").single(), "createAccount") as Row;
-      accounts.push({ id: ar.id, kind: ar.kind, institution: ar.institution, name: ar.name, balance: a.balance ?? null, status: "active" });
-    }
-    return { connection: { id: r.id, provider: r.provider, institution: r.institution, status: r.status } as Connection, accounts };
+  async createAccount(a: Omit<AccountRow, "id">): Promise<AccountRow> {
+    const r = check(await this.from("accounts").insert({ connection_id: a.connectionId ?? null, kind: a.kind, institution: a.institution, name: a.name, balance_agorot: a.balance ?? null, external_id: a.externalId ?? null }).select("*").single(), "createAccount") as Row;
+    return { id: r.id, kind: r.kind, institution: r.institution, name: r.name, balance: a.balance ?? null, status: "active", externalId: r.external_id, connectionId: r.connection_id };
   }
+  async createConnection(c: { provider: string; institution: string; accounts: Omit<AccountRow, "id">[]; tokenCiphertext?: string; consentExpiresAt?: string | null }) {
+    const r = check(await this.from("financial_connections").insert({ provider: c.provider, institution: c.institution, status: "active", read_only: true, token_ciphertext: c.tokenCiphertext ?? null, consent_expires_at: c.consentExpiresAt ?? null }).select("id, provider, institution, status, consent_expires_at").single(), "createConnection") as Row;
+    const accounts: AccountRow[] = [];
+    for (const a of c.accounts) accounts.push(await this.createAccount({ ...a, connectionId: r.id }));
+    return { connection: { id: r.id, provider: r.provider, institution: r.institution, status: r.status, consentExpiresAt: r.consent_expires_at } as Connection, accounts };
+  }
+  async connectionToken(id: string) {
+    const r = check(await this.from("financial_connections").select("token_ciphertext").eq("id", id).maybeSingle(), "connectionToken") as Row | null;
+    return r?.token_ciphertext ?? null;
+  }
+  async apiKeys(): Promise<ApiKeyRow[]> {
+    const rows = check(await this.from("api_keys").select("id,name,prefix,created_at,last_used_at,revoked_at").order("created_at", { ascending: false }), "apiKeys") as Row[];
+    return rows.map((r) => ({ id: r.id, name: r.name, prefix: r.prefix, createdAt: r.created_at, lastUsedAt: r.last_used_at, revoked: !!r.revoked_at }));
+  }
+  async createApiKey(name: string, hash: string, prefix: string): Promise<ApiKeyRow> {
+    const r = check(await this.from("api_keys").insert({ name, key_hash: hash, prefix }).select("id,name,prefix,created_at").single(), "createApiKey") as Row;
+    return { id: r.id, name: r.name, prefix: r.prefix, createdAt: r.created_at, revoked: false };
+  }
+  async revokeApiKey(id: string) { check(await this.from("api_keys").update({ revoked_at: new Date().toISOString() }).eq("id", id), "revokeApiKey"); }
   async recordSync(connectionId: string, ok: boolean, error?: string) {
     const now = new Date().toISOString();
     const patch: Row = { last_attempted_sync: now, status: ok ? "active" : "error", last_error: ok ? null : error ?? "error" };
@@ -302,7 +317,7 @@ export class SupabaseRepo implements Repo {
   /* accounts / notifications */
   async accounts(): Promise<AccountRow[]> {
     const rows = check(await this.from("accounts").select("*, financial_connections(status,last_successful_sync)"), "accounts") as Row[];
-    return rows.map((r) => ({ id: r.id, kind: r.kind, institution: r.institution, name: r.name, balance: r.balance_agorot == null ? null : Number(r.balance_agorot), lastSync: r.financial_connections?.last_successful_sync ?? null, status: r.financial_connections?.status ?? null }));
+    return rows.map((r) => ({ id: r.id, kind: r.kind, institution: r.institution, name: r.name, balance: r.balance_agorot == null ? null : Number(r.balance_agorot), lastSync: r.financial_connections?.last_successful_sync ?? null, status: r.financial_connections?.status ?? "active", externalId: r.external_id, connectionId: r.connection_id }));
   }
   async notifications(): Promise<Notification[]> {
     const rows = check(await this.from("notifications").select("*").order("created_at", { ascending: false }).limit(50), "notifications") as Row[];
