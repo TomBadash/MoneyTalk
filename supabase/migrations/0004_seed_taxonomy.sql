@@ -11,7 +11,7 @@ insert into public.categories (id, user_id, parent_id, level, name_he, icon, col
 ('p_wealth', null, null, 'parent', 'חיסכון והשקעות', '📈', '#22C55E', null, 'expense'),
 ('p_transfers', null, null, 'parent', 'העברות', '🔁', '#64748B', null, 'expense'),
 ('p_other', null, null, 'parent', 'אחר', '🧾', '#64748B', null, 'expense'),
-('c_eating_out', null, 'p_food', 'category', 'מסעדות וקפה', null, '#F59E0B', 'lifestyle', 'expense'),
+('c_eating_out', null, 'p_food', 'category', 'אוכל בחוץ', null, '#F59E0B', 'lifestyle', 'expense'),
 ('c_delivery', null, 'p_food', 'category', 'משלוחים', null, '#F59E0B', 'lifestyle', 'expense'),
 ('c_bars', null, 'p_food', 'category', 'ברים ובילויים', null, '#F59E0B', 'lifestyle', 'expense'),
 ('c_groceries', null, 'p_household', 'category', 'מזון לבית', null, '#10B981', 'variable_essential', 'expense'),

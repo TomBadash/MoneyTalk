@@ -53,7 +53,8 @@ export class MemoryRepo implements Repo {
     const done: Txn[] = [];
     for (const t of ts) {
       const dup = t.externalId && [...this._txns.values()].some((x) => x.externalId === t.externalId && x.accountId === t.accountId && x.sourceProvider === t.sourceProvider);
-      if (dup) continue;
+      const monthDup = t.recurringId && t.sourceProvider === "recurring" && [...this._txns.values()].some((x) => x.recurringId === t.recurringId && x.sourceProvider === "recurring" && x.date.slice(0, 7) === t.date.slice(0, 7));
+      if (dup || monthDup) continue;
       const row = { ...t, createdAt: t.createdAt ?? now, updatedAt: now };
       this._txns.set(row.id, row);
       done.push(row);
@@ -102,6 +103,7 @@ export class MemoryRepo implements Repo {
     return row;
   }
   async deleteRecurring(id: string) { this._recurring = this._recurring.filter((r) => r.id !== id); }
+  async updateRecurring(id: string, patch: Partial<RecurringRule>) { this._recurring = this._recurring.map((r) => (r.id === id ? { ...r, ...patch } : r)); }
 
   private _goals = new Map<string, Goal>();
   async goals() { return [...this._goals.values()]; }
@@ -126,7 +128,7 @@ export class MemoryRepo implements Repo {
   async lastJob() { return this._jobs.at(-1) ?? null; }
   async recordJob(j: SyncJob) { this._jobs.push(j); }
 
-  async budgets() { return this._budgets; }
+  async budgets() { return this._budgets.filter((b) => b.categoryId == null || b.amount > 0); }
   async setBudget(categoryId: string | null, amount: number) {
     this._budgets = [...this._budgets.filter((b) => b.categoryId !== categoryId), { categoryId, amount }];
     if (categoryId == null) this._profile = { ...this._profile, variableTarget: amount };

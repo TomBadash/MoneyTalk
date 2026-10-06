@@ -69,3 +69,25 @@ export function relativeDayLabel(d: Date | string): string {
   if (diffDays === 1) return "אתמול";
   return formatDayMonth(date);
 }
+
+/** Integer agorot → "₪1,234" (whole shekels) or "₪1,234.50" when `exact`. */
+export function formatAgorot(a: number, exact = false): string {
+  const neg = a < 0 ? "-" : "";
+  const v = Math.abs(a) / 100;
+  if (!exact) return `${neg}₪${numFmt.format(Math.round(v))}`;
+  return `${neg}${formatMoney(v)}`;
+}
+
+/** "+8%" / "-12%" */
+export function formatSignedPercent(ratio: number): string {
+  const p = Math.round(ratio * 100);
+  return `${p > 0 ? "+" : ""}${p}%`;
+}
+
+/** ISO "YYYY-MM-DD" → DD/MM/YYYY without timezone surprises. */
+export function formatIso(d: string): string {
+  return `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
+}
+export function formatIsoShort(d: string): string {
+  return `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+}

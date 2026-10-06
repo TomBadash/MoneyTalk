@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Heebo } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { StoreProvider } from "@/lib/store";
 import "./globals.css";
 
 const heebo = Heebo({
@@ -12,9 +11,9 @@ const heebo = Heebo({
 });
 
 export const metadata: Metadata = {
-  title: "MoneyTalk — ניהול הוצאות חכם",
+  title: { default: "MoneyTalk — ניהול כספים חכם", template: "%s" },
   description:
-    "אפליקציית פיננסים אישית בעברית: מעקב הוצאות, תקציב, יעדים ותובנות שבועיות.",
+    "מערכת הפעלה פיננסית אישית בעברית: כמה נשאר לך להוציא, האם אתה בקצב, וכמה תחסוך — אוטומטית.",
 };
 
 export const viewport: Viewport = {
@@ -36,7 +35,7 @@ export default function RootLayout({
     >
       <body className="min-h-full antialiased">
         <ThemeProvider>
-          <StoreProvider>{children}</StoreProvider>
+          {children}
         </ThemeProvider>
       </body>
     </html>

@@ -38,6 +38,7 @@ export interface Repo {
   replaceDetectedRecurring(rs: RecurringRule[]): Promise<void>;
   addUserRecurring(r: Omit<RecurringRule, "id">): Promise<RecurringRule>;
   deleteRecurring(id: string): Promise<void>;
+  updateRecurring(id: string, patch: Partial<Pick<RecurringRule, "lastSeen" | "nextExpected" | "active" | "amount">>): Promise<void>;
 
   budgets(): Promise<Budget[]>;
   setBudget(categoryId: string | null, amount: number, reason: "user" | "suggestion_approved" | "onboarding"): Promise<void>;

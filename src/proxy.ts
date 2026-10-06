@@ -12,11 +12,12 @@ import {
 
 // Paths that are reachable without a session.
 function isPublicPath(pathname: string): boolean {
-  return pathname.startsWith("/login") || pathname.startsWith("/auth");
+  // /api/v1 (API key) and /api/cron (CRON_SECRET) authenticate themselves.
+  return pathname.startsWith("/login") || pathname.startsWith("/auth") || pathname.startsWith("/api/v1") || pathname.startsWith("/api/cron");
 }
 
 export async function proxy(request: NextRequest) {
-  // Demo mode (no Supabase keys): do nothing, app runs on localStorage.
+  // No Supabase keys: do nothing, the app runs on the in-memory demo repository.
   if (!isSupabaseConfigured()) return NextResponse.next();
 
   let response = NextResponse.next({ request });

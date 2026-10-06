@@ -51,3 +51,39 @@ export function productStats(ts: Txn[]): ProductStat[] {
     };
   });
 }
+
+export type MerchantStat = { key: string; name: string; total: Agorot; count: number; avg: Agorot; last: IsoDate; first: IsoDate };
+export function merchantStats(ts: Txn[]): MerchantStat[] {
+  const m = new Map<string, MerchantStat>();
+  for (const t of ts) {
+    if (!isConsumption(t) || !t.merchantNormalized) continue;
+    const s = m.get(t.merchantNormalized) ?? { key: t.merchantNormalized, name: t.merchantRaw || t.merchantNormalized, total: 0, count: 0, avg: 0, last: t.date, first: t.date };
+    s.total += t.amount; s.count++;
+    if (t.date > s.last) s.last = t.date;
+    if (t.date < s.first) s.first = t.date;
+    m.set(t.merchantNormalized, s);
+  }
+  return [...m.values()].map((s) => ({ ...s, avg: Math.round(s.total / s.count) })).sort((a, b) => b.total - a.total);
+}
+
+export type MonthPoint = { key: string; total: Agorot; fixed: Agorot; variable: Agorot; oneOff: Agorot };
+/** Consumption per calendar month for the `months` months ending at `endMonth` (YYYY-MM), zero-filled. */
+export function monthlySeries(ts: Txn[], endMonth: string, months: number): MonthPoint[] {
+  const out = new Map<string, MonthPoint>();
+  const [y, m] = endMonth.split("-").map(Number);
+  for (let k = months - 1; k >= 0; k--) {
+    const d = new Date(Date.UTC(y, m - 1 - k, 1));
+    const key = d.toISOString().slice(0, 7);
+    out.set(key, { key, total: 0, fixed: 0, variable: 0, oneOff: 0 });
+  }
+  for (const t of ts) {
+    if (!isConsumption(t)) continue;
+    const p = out.get(t.date.slice(0, 7));
+    if (!p) continue;
+    p.total += t.amount;
+    if (t.consumptionType === "fixed") p.fixed += t.amount;
+    else if (t.consumptionType === "one_off") p.oneOff += t.amount;
+    else p.variable += t.amount;
+  }
+  return [...out.values()];
+}

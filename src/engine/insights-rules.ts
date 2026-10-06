@@ -18,6 +18,16 @@ const MIN_IMPACT = 10_000; // ₪100 — below this an insight is noise
 const nis = (a: Agorot) => `₪${Math.round(Math.abs(a) / 100).toLocaleString("he-IL")}`;
 const nisExact = (a: Agorot) => `₪${(Math.abs(a) / 100).toLocaleString("he-IL", { maximumFractionDigits: 2 })}`;
 
+export function alertText(a: RecurringAlert): { text: string; tone: Insight["tone"]; impact: Agorot } {
+  switch (a.kind) {
+    case "price_increase": return { tone: "attention", impact: (a.to - a.from) * 12 + 5_000, text: `${a.merchant} התייקר ב-${nisExact(a.to - a.from)} (${nisExact(a.from)} ← ${nisExact(a.to)}).` };
+    case "new": return { tone: "neutral", impact: a.amount * 6 + 4_000, text: `זיהינו חיוב חוזר חדש: ${a.merchant} (${nisExact(a.amount)}).` };
+    case "disappeared": return { tone: "neutral", impact: 6_000, text: `${a.merchant} לא חויב לאחרונה — ייתכן שהמנוי בוטל.` };
+    case "duplicate": return { tone: "attention", impact: a.amount + 8_000, text: `${a.merchant} חויב פעמיים באותו חודש (${nisExact(a.amount)}).` };
+    case "unusual_amount": return { tone: "attention", impact: a.amount - a.typical, text: `חיוב חריג ב-${a.merchant}: ${nisExact(a.amount)} לעומת ${nisExact(a.typical)} בדרך כלל.` };
+  }
+}
+
 export type InsightInput = {
   today: IsoDate;
   txns: Txn[]; // ≥ 4 months of history helps
@@ -96,22 +106,8 @@ export function buildInsights(i: InsightInput): Insight[] {
 
   // 4) Recurring changes — always high-signal
   for (const a of i.alerts) {
-    if (a.kind === "price_increase") {
-      out.push({ id: `rec:up:${a.merchant}`, kind: "recurring", tone: "attention", impact: (a.to - a.from) * 12 + 5_000, link: "/recurring",
-        text: `${a.merchant} התייקר ב-${nisExact(a.to - a.from)} (${nisExact(a.from)} ← ${nisExact(a.to)}).` });
-    } else if (a.kind === "new") {
-      out.push({ id: `rec:new:${a.merchant}`, kind: "recurring", tone: "neutral", impact: a.amount * 6 + 4_000, link: "/recurring",
-        text: `זיהינו חיוב חוזר חדש: ${a.merchant} (${nisExact(a.amount)}).` });
-    } else if (a.kind === "disappeared") {
-      out.push({ id: `rec:gone:${a.merchant}`, kind: "recurring", tone: "neutral", impact: 6_000, link: "/recurring",
-        text: `${a.merchant} לא חויב לאחרונה — ייתכן שהמנוי בוטל.` });
-    } else if (a.kind === "duplicate") {
-      out.push({ id: `rec:dup:${a.merchant}`, kind: "recurring", tone: "attention", impact: a.amount + 8_000, link: "/recurring",
-        text: `${a.merchant} חויב פעמיים באותו חודש (${nisExact(a.amount)}).` });
-    } else {
-      out.push({ id: `rec:odd:${a.merchant}`, kind: "recurring", tone: "attention", impact: a.amount - a.typical, link: "/recurring",
-        text: `חיוב חריג ב-${a.merchant}: ${nisExact(a.amount)} לעומת ${nisExact(a.typical)} בדרך כלל.` });
-    }
+    const t = alertText(a);
+    out.push({ id: `rec:${a.kind}:${a.merchant}`, kind: "recurring", tone: t.tone, impact: t.impact, text: t.text, link: "/recurring" });
   }
 
   return out.filter((x) => x.impact >= MIN_IMPACT / 2).sort((a, b) => b.impact - a.impact);

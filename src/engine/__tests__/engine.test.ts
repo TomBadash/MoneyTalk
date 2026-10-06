@@ -165,3 +165,25 @@ describe("budget suggestions", () => {
     expect(suggestCategoryBudget("c_eating_out", [], null, "2026-09-03")).toBeNull();
   });
 });
+
+import { goalProgress } from "../goals";
+import { suggestOverall, suggestionPeriod } from "@/services/suggestions";
+describe("goals", () => {
+  it("required monthly and ETA", () => {
+    const g = { id: "g", name: "מחשב", kind: "purchase" as const, target: 700_000, current: 100_000, monthlyContribution: 100_000, targetDate: "2027-04-06" };
+    const p = goalProgress(g, "2026-10-06");
+    expect(p.remaining).toBe(600_000);
+    expect(p.requiredMonthly).toBe(100_000);
+    expect(p.eta).toBe("2027-04-06");
+    expect(goalProgress({ ...g, current: 700_000 }, "2026-10-06").done).toBe(true);
+  });
+});
+describe("overall suggestion", () => {
+  it("halfway from current toward 3-month avg, and period switches after day 10", () => {
+    const h = ["2026-07", "2026-08", "2026-09"].map((m) => ({ date: `${m}-10`, amount: 600_000, consumptionType: "lifestyle", financialType: "expense", transactionType: "debit" }));
+    expect(suggestOverall(h, 500_000, "2026-10-03")).toEqual({ current: 500_000, suggested: 550_000, avg3m: 600_000 });
+    expect(suggestOverall(h, null, "2026-10-03")?.suggested).toBe(600_000);
+    expect(suggestionPeriod("2026-10-03")).toBe("2026-10");
+    expect(suggestionPeriod("2026-10-20")).toBe("2026-11");
+  });
+});

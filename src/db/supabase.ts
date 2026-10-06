@@ -218,6 +218,14 @@ export class SupabaseRepo implements Repo {
     return { ...r, id: row.id, source: "user" };
   }
   async deleteRecurring(id: string) { check(await this.from("recurring_transactions").delete().eq("id", id), "deleteRecurring"); }
+  async updateRecurring(id: string, patch: Partial<RecurringRule>) {
+    const row: Row = {};
+    if (patch.lastSeen) row.last_seen = patch.lastSeen;
+    if (patch.nextExpected) row.next_expected = patch.nextExpected;
+    if (patch.active != null) row.active = patch.active;
+    if (patch.amount != null) row.amount_agorot = patch.amount;
+    check(await this.from("recurring_transactions").update(row).eq("id", id), "updateRecurring");
+  }
 
   /* goals */
   async goals(): Promise<Goal[]> {
@@ -263,7 +271,7 @@ export class SupabaseRepo implements Repo {
   /* budgets & suggestions */
   async budgets(): Promise<Budget[]> {
     const rows = check(await this.from("budgets").select("category_id, amount_agorot"), "budgets") as Row[];
-    return rows.map((r) => ({ categoryId: r.category_id, amount: Number(r.amount_agorot) }));
+    return rows.map((r) => ({ categoryId: r.category_id, amount: Number(r.amount_agorot) })).filter((b) => b.categoryId == null || b.amount > 0);
   }
   async setBudget(categoryId: string | null, amount: number, reason: "user" | "suggestion_approved" | "onboarding") {
     let q = this.from("budgets").select("id, amount_agorot");

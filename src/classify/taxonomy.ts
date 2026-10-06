@@ -22,7 +22,7 @@ export const PARENTS: Parent[] = [
 ];
 
 export const CATS: Cat[] = [
-  { id: "c_eating_out", he: "מסעדות וקפה", parent: "p_food", consumption: "lifestyle" },
+  { id: "c_eating_out", he: "אוכל בחוץ", parent: "p_food", consumption: "lifestyle" },
   { id: "c_delivery", he: "משלוחים", parent: "p_food", consumption: "lifestyle" },
   { id: "c_bars", he: "ברים ובילויים", parent: "p_food", consumption: "lifestyle" },
   { id: "c_groceries", he: "מזון לבית", parent: "p_household", consumption: "variable_essential" },
@@ -148,4 +148,12 @@ export function nodeInfo(id: string | null | undefined): { id: string; he: strin
   }
   const o = parentById.get("p_other")!;
   return { id: "p_other", he: o.he, color: o.color, icon: o.icon, parentId: null };
+}
+
+/** Grouped options for category pickers: group = "קטגוריה", options = subcategories. */
+export function subcategoryGroups(): { label: string; options: { id: string; he: string }[] }[] {
+  return CATS.map((c) => ({
+    label: `${parentById.get(c.parent)!.he} › ${c.he}`,
+    options: SUBS.filter((s) => s.cat === c.id).map((s) => ({ id: s.id, he: s.he })),
+  })).filter((g) => g.options.length > 0);
 }
