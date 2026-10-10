@@ -22,9 +22,31 @@ function getWinner(board: Cell[]): { mark: Mark; line: number[] } | null {
   return null;
 }
 
+/** Computer move: win if possible, else block, else center, corner, any. */
+function cpuMove(board: Cell[], me: Mark): number {
+  const other: Mark = me === "X" ? "O" : "X";
+  const empty = board.map((c, i) => (c ? -1 : i)).filter((i) => i >= 0);
+  for (const mark of [me, other]) {
+    for (const i of empty) {
+      const t = board.slice();
+      t[i] = mark;
+      if (getWinner(t)) return i;
+    }
+  }
+  const pick = (opts: number[]) => {
+    const free = opts.filter((i) => !board[i]);
+    return free.length ? free[Math.floor(Math.random() * free.length)] : -1;
+  };
+  const m = pick([4]);
+  if (m >= 0) return m;
+  const c = pick([0, 2, 6, 8]);
+  return c >= 0 ? c : pick([1, 3, 5, 7]);
+}
+
 export default function TicTacToePage() {
   const [board, setBoard] = useState<Cell[]>(Array(9).fill(null));
   const [turn, setTurn] = useState<Mark>("X");
+  const [vsCpu, setVsCpu] = useState(true);
   const [score, setScore] = useState({ X: 0, O: 0, draw: 0 });
 
   const win = getWinner(board);
@@ -35,16 +57,30 @@ export default function TicTacToePage() {
     if (board[i] || over) return;
     const next = board.slice();
     next[i] = turn;
+    let w = getWinner(next);
+    let mover = turn;
+    // Computer answers as O right after the human's X move.
+    if (vsCpu && !w && !next.every(Boolean)) {
+      next[cpuMove(next, "O")] = "O";
+      w = getWinner(next);
+      mover = "O";
+    }
     setBoard(next);
-    const w = getWinner(next);
     if (w) setScore((s) => ({ ...s, [w.mark]: s[w.mark] + 1 }));
     else if (next.every(Boolean)) setScore((s) => ({ ...s, draw: s.draw + 1 }));
-    else setTurn(turn === "X" ? "O" : "X");
+    else setTurn(vsCpu ? "X" : mover === "X" ? "O" : "X");
+  }
+
+  function setMode(cpu: boolean) {
+    setVsCpu(cpu);
+    setBoard(Array(9).fill(null));
+    setTurn("X");
+    setScore({ X: 0, O: 0, draw: 0 });
   }
 
   function newRound() {
     setBoard(Array(9).fill(null));
-    setTurn(win ? (win.mark === "X" ? "O" : "X") : "X");
+    setTurn(!vsCpu && win ? (win.mark === "X" ? "O" : "X") : "X");
   }
 
   const status = win
@@ -54,7 +90,24 @@ export default function TicTacToePage() {
       : `תור של ${turn}`;
 
   return (
-    <AppShell title="איקס עיגול" subtitle="שני שחקנים על אותו מכשיר">
+    <AppShell title="איקס עיגול" subtitle={vsCpu ? "אתה X, המחשב O" : "שני שחקנים על אותו מכשיר"}>
+      <div className="spread" style={{ gap: 8, marginBottom: 14 }}>
+        <button
+          className={vsCpu ? "btn" : "btn ghost"}
+          style={{ padding: 12, fontSize: 15 }}
+          onClick={() => setMode(true)}
+        >
+          🤖 נגד המחשב
+        </button>
+        <button
+          className={vsCpu ? "btn ghost" : "btn"}
+          style={{ padding: 12, fontSize: 15 }}
+          onClick={() => setMode(false)}
+        >
+          👥 שני שחקנים
+        </button>
+      </div>
+
       <div className="card">
         <div className="spread tnum" style={{ fontWeight: 800 }}>
           <span style={{ color: "var(--c-car)" }}>X: {score.X}</span>
