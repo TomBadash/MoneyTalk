@@ -56,6 +56,13 @@ export default function SettingsPage() {
         </div>
       </Link>
 
+      <Link href="/tictactoe" className="card" style={{ display: "block" }}>
+        <div style={{ fontWeight: 700 }}>🎮 איקס עיגול</div>
+        <div className="tiny muted" style={{ marginTop: 3 }}>
+          הפסקה קטנה — משחק לשני שחקנים
+        </div>
+      </Link>
+
       {cloud ? (
         <>
           <div className="section-h">
